@@ -1,0 +1,84 @@
+<!doctype html><html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Claude 사용량</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%A1</text></svg>">
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:#0b0f17;color:#e5e7eb;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.wrap{width:100%;max-width:440px}
+.head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+h1{font-size:22px;font-weight:800}
+.who{color:#6b7280;font-size:12px;margin-bottom:20px}
+.plan{display:inline-block;background:#1e3a5f;color:#93c5fd;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700;margin-left:6px}
+.card{background:#131a26;border:1px solid #1f2937;border-radius:14px;padding:20px 22px;margin-bottom:14px}
+.row{margin-bottom:18px}.row:last-child{margin-bottom:0}
+.rlabel{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+.rlabel .name{font-weight:600;font-size:15px}
+.rlabel .pct{font-weight:800;font-size:18px}
+.track{height:10px;background:#293241;border-radius:6px;overflow:hidden}
+.fill{height:100%;border-radius:6px;transition:width .5s}
+.reset{color:#6b7280;font-size:11px;margin-top:5px}
+.foot{text-align:center;color:#4b5563;font-size:11px;margin-top:8px}
+.err{color:#f87171;text-align:center;padding:20px;font-size:14px;line-height:1.6}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:5px;animation:p 2s infinite}
+@keyframes p{50%{opacity:.3}}
+/* gate */
+#gate{position:fixed;inset:0;z-index:99;background:#0b0f17;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
+#gate .lk{font-size:40px;margin-bottom:14px}#gate .t{font-size:18px;font-weight:800;margin-bottom:18px}
+#gate input{background:#131a26;border:1px solid #1f2937;border-radius:12px;padding:13px 15px;font-size:16px;color:#e5e7eb;width:min(260px,78vw);text-align:center}
+#gate button{margin-top:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-size:15px;font-weight:800}
+#gate .e{color:#f87171;font-size:12px;margin-top:10px;height:15px}
+</style></head><body>
+<div id="gate"><div class="lk">🔒</div><div class="t">⚡ Claude 사용량</div>
+  <input id="gpw" type="password" placeholder="비밀번호" autocomplete="off">
+  <button id="gbtn">보기</button><div class="e" id="gerr"></div></div>
+<div class="wrap">
+  <div class="head"><h1>⚡ Claude 사용량<span class="plan" id="plan"></span></h1></div>
+  <div class="who" id="who">불러오는 중…</div>
+  <div class="card" id="card"><div class="foot">불러오는 중…</div></div>
+  <div class="foot"><span class="dot"></span><span id="foot">…</span></div>
+</div>
+<script>
+/* 비번 게이트 */
+(function(){var PW='aram';function ok(){var g=document.getElementById('gate');if(g)g.style.display='none';}
+if(sessionStorage.getItem('uAuth')==='1')ok();
+function tr(){if(document.getElementById('gpw').value===PW){sessionStorage.setItem('uAuth','1');ok();}else{document.getElementById('gerr').textContent='비밀번호가 틀렸어요';}}
+window.addEventListener('DOMContentLoaded',function(){document.getElementById('gbtn').onclick=tr;document.getElementById('gpw').addEventListener('keydown',function(e){if(e.key==='Enter')tr();});});})();
+
+function barColor(p){return p>=90?'#ef4444':p>=70?'#f59e0b':p>=40?'#3b82f6':'#10b981';}
+function fmtReset(iso){if(!iso)return '';var ms=new Date(iso)-new Date();if(ms<=0)return '곧 재설정';
+  var h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),d=Math.floor(h/24);
+  if(d>=1)return d+'일 '+(h%24)+'시간 후 재설정';return h>0?h+'시간 '+m+'분 후 재설정':m+'분 후 재설정';}
+function rowHtml(name,pct,iso){pct=Math.round(pct||0);
+  return '<div class="row"><div class="rlabel"><span class="name">'+name+'</span>'+
+    '<span class="pct" style="color:'+barColor(pct)+'">'+pct+'%</span></div>'+
+    '<div class="track"><div class="fill" style="width:'+Math.min(pct,100)+'%;background:'+barColor(pct)+'"></div></div>'+
+    '<div class="reset">'+fmtReset(iso)+'</div></div>';}
+function fmtAgo(iso){if(!iso)return '';var ms=new Date()-new Date(iso);var m=Math.floor(ms/60000);
+  if(m<1)return '방금';if(m<60)return m+'분 전';var h=Math.floor(m/60);return h+'시간 '+(m%60)+'분 전';}
+async function load(){
+  try{
+    var d=await fetch('./usage.json?_='+Date.now()).then(r=>{if(!r.ok)throw new Error(r.status);return r.json();});
+    var lim=d.limits||[];
+    var s=lim.find(l=>l.kind==='session')||{percent:(d.five_hour||{}).utilization,resets_at:(d.five_hour||{}).resets_at};
+    var wa=lim.find(l=>l.kind==='weekly_all')||{percent:(d.seven_day||{}).utilization,resets_at:(d.seven_day||{}).resets_at};
+    var ws=lim.find(l=>l.kind==='weekly_scoped');
+    var html=rowHtml('현재 세션 (5시간)',s.percent,s.resets_at)+rowHtml('주간 · 모든 모델',wa.percent,wa.resets_at);
+    if(ws)html+=rowHtml('주간 · '+((ws.scope&&ws.scope.model&&ws.scope.model.display_name)||'제한 모델'),ws.percent,ws.resets_at);
+    document.getElementById('card').innerHTML=html;
+    document.getElementById('foot').textContent='기록 시각 '+fmtAgo(d.generated_at)+' · 자동 갱신';
+  }catch(e){
+    if(document.querySelector('#card .row')){document.getElementById('foot').textContent='갱신 대기 중… 이전 값 유지';}
+    else{document.getElementById('card').innerHTML='<div class="err">아직 사용량 기록이 없어요.<br>PC에서 갱신되면 여기 표시됩니다.<br><small>('+e.message+')</small></div>';}
+  }
+}
+async function loadProfile(){
+  try{var p=await fetch('./profile.json?_='+Date.now()).then(r=>r.json());var a=p.account||{};
+    document.getElementById('who').textContent=(a.email||'')+(a.display_name?' · '+a.display_name:'');
+    document.getElementById('plan').textContent=a.has_claude_max?'Max':(a.has_claude_pro?'Pro':'');}catch(e){}
+}
+loadProfile();load();setInterval(load,60000);setInterval(loadProfile,3600000);
+</script>
+</body></html>
