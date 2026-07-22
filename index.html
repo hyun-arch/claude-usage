@@ -24,16 +24,7 @@ h1{font-size:22px;font-weight:800}
 .err{color:#f87171;text-align:center;padding:20px;font-size:14px;line-height:1.6}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981;margin-right:5px;animation:p 2s infinite}
 @keyframes p{50%{opacity:.3}}
-/* gate */
-#gate{position:fixed;inset:0;z-index:99;background:#0b0f17;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}
-#gate .lk{font-size:40px;margin-bottom:14px}#gate .t{font-size:18px;font-weight:800;margin-bottom:18px}
-#gate input{background:#131a26;border:1px solid #1f2937;border-radius:12px;padding:13px 15px;font-size:16px;color:#e5e7eb;width:min(260px,78vw);text-align:center}
-#gate button{margin-top:12px;background:#2563eb;color:#fff;border:none;border-radius:12px;padding:12px 28px;font-size:15px;font-weight:800}
-#gate .e{color:#f87171;font-size:12px;margin-top:10px;height:15px}
 </style></head><body>
-<div id="gate"><div class="lk">🔒</div><div class="t">⚡ Claude 사용량</div>
-  <input id="gpw" type="password" placeholder="비밀번호" autocomplete="off">
-  <button id="gbtn">보기</button><div class="e" id="gerr"></div></div>
 <div class="wrap">
   <div class="head"><h1>⚡ Claude 사용량<span class="plan" id="plan"></span></h1></div>
   <div class="who" id="who">불러오는 중…</div>
@@ -41,12 +32,6 @@ h1{font-size:22px;font-weight:800}
   <div class="foot"><span class="dot"></span><span id="foot">…</span></div>
 </div>
 <script>
-/* 비번 게이트 */
-(function(){var PW='aram';function ok(){var g=document.getElementById('gate');if(g)g.style.display='none';}
-if(sessionStorage.getItem('uAuth')==='1')ok();
-function tr(){if(document.getElementById('gpw').value===PW){sessionStorage.setItem('uAuth','1');ok();}else{document.getElementById('gerr').textContent='비밀번호가 틀렸어요';}}
-window.addEventListener('DOMContentLoaded',function(){document.getElementById('gbtn').onclick=tr;document.getElementById('gpw').addEventListener('keydown',function(e){if(e.key==='Enter')tr();});});})();
-
 function barColor(p){return p>=90?'#ef4444':p>=70?'#f59e0b':p>=40?'#3b82f6':'#10b981';}
 function fmtReset(iso){if(!iso)return '';var ms=new Date(iso)-new Date();if(ms<=0)return '곧 재설정';
   var h=Math.floor(ms/3600000),m=Math.floor(ms%3600000/60000),d=Math.floor(h/24);
